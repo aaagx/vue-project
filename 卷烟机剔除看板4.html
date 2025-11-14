@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卷烟机剔除数据监控看板</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        
+        body {
+            background-color: #0f1c3c;
+            color: #e0e0e0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            height: 95vh;
+            gap: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: linear-gradient(90deg, #1a2b4d, #2a3f6f);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        
+        .region-selector {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .region-btn {
+            padding: 8px 20px;
+            background-color: #2a3f6f;
+            border: none;
+            border-radius: 5px;
+            color: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .region-btn.active {
+            background-color: #3a8ee6;
+            color: white;
+        }
+        
+        .region-btn:hover {
+            background-color: #4a9ef6;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #1a2b4d;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .chart-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .chart-row {
+            display: flex;
+            gap: 20px;
+            height: 50%;
+        }
+        
+        .chart-card {
+            flex: 1;
+            background-color: #1a2b4d;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chart-title {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        
+        .chart {
+            width: 100%;
+            flex: 1;
+        }
+        
+        .data-panel {
+            width: 300px;
+            background-color: #1a2b4d;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .data-card {
+            background-color: #2a3f6f;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .data-card h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #a0c0ff;
+        }
+        
+        .data-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .data-unit {
+            font-size: 12px;
+            color: #a0c0ff;
+            margin-left: 5px;
+        }
+        
+        .machine-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .machine-item {
+            background-color: #2a3f6f;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .machine-item:hover {
+            background-color: #3a8ee6;
+        }
+        
+        .machine-item.active {
+            background-color: #3a8ee6;
+            color: white;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .checkbox-item input {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #1a2b4d;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .time-range {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .time-btn {
+            padding: 5px 15px;
+            background-color: #2a3f6f;
+            border: none;
+            border-radius: 5px;
+            color: #e0e0e0;
+            cursor: pointer;
+        }
+        
+        .time-btn.active {
+            background-color: #3a8ee6;
+            color: white;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(26, 43, 77, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            z-index: 10;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #3a8ee6;
+            border-top: 4px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #3a8ee6;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateX(150%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .current-machine {
+            font-size: 14px;
+            color: #a0c0ff;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>卷烟机剔除数据监控看板</h1>
+            <div class="region-selector">
+                <button class="region-btn active" data-region="1">一区</button>
+                <button class="region-btn" data-region="2">二区</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <h3>剔除点选择</h3>
+                <div class="checkbox-group" id="rejection-points">
+                    <!-- 动态生成剔除点复选框 -->
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <div class="chart-title">设备剔除趋势图</div>
+                        <div class="current-machine" id="trend-machine">当前设备: J11</div>
+                        <div id="trend-chart" class="chart"></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">剔除率对比</div>
+                        <div class="current-machine" id="rate-machine">当前设备: J11</div>
+                        <div id="rate-chart" class="chart"></div>
+                    </div>
+                </div>
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <div class="chart-title">剔除量分布</div>
+                        <div class="current-machine" id="distribution-machine">当前设备: J11</div>
+                        <div id="distribution-chart" class="chart"></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">设备状态概览</div>
+                        <div class="current-machine" id="status-machine">当前设备: J11</div>
+                        <div id="status-chart" class="chart"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="data-panel">
+                <div class="data-card">
+                    <h3>当前区域设备</h3>
+                    <div class="machine-list" id="machine-list">
+                        <!-- 动态生成设备列表 -->
+                    </div>
+                </div>
+                <div class="data-card">
+                    <h3>总剔除率</h3>
+                    <div class="data-value" id="total-rate">1.85<span class="data-unit">%</span></div>
+                </div>
+                <div class="data-card">
+                    <h3>总剔除量</h3>
+                    <div class="data-value" id="total-rejection">12,458<span class="data-unit">支</span></div>
+                </div>
+                <div class="data-card">
+                    <h3>平均斜率</h3>
+                    <div class="data-value" id="avg-slope">0.23<span class="data-unit">/h</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="time-range">
+                <button class="time-btn active" data-time="1">1小时</button>
+                <button class="time-btn" data-time="4">4小时</button>
+                <button class="time-btn" data-time="24">24小时</button>
+                <button class="time-btn" data-time="168">7天</button>
+            </div>
+            <div class="update-time" id="update-time">最后更新: 2025-11-07 11:33:25</div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">数据已更新</div>
+
+    <script>
+        // 模拟数据 - 实际应用中应从后端API获取
+        const rejectionPoints = [
+            "水松纸纸接头", "水松纸拼接剔除数", "缺胶水剔除数", "ORIS剔除数量", 
+            "吸阻剔除数", "成型缺陷剔除数", "缺嘴剔除数", "空头剔除数", 
+            "通风剔除数", "漏气剔除数", "SRM剔除数", "轻烟端剔除数", 
+            "硬点剔除数", "软点剔除数", "过重剔除数", "过轻剔除数"
+        ];
+        
+        const machines = {
+            "1": ["J11", "J12"],
+            "2": ["J63", "J64", "J65", "J66", "J67"]
+        };
+        
+        // 全局状态
+        const appState = {
+            currentRegion: "1",
+            currentTimeRange: "1",
+            selectedPoints: rejectionPoints,
+            selectedMachine: null,
+            charts: {}
+        };
+        
+        // 为每个设备生成独立的数据
+        const deviceData = {};
+        
+        // 初始化设备数据
+        function initializeDeviceData() {
+            for (const region in machines) {
+                machines[region].forEach(machine => {
+                    deviceData[machine] = {
+                        trendData: [],
+                        rateData: [],
+                        distributionData: [],
+                        statusData: 0,
+                        summaryData: {}
+                    };
+                    
+                    // 生成趋势数据
+                    deviceData[machine].trendData = generateTrendData(appState.currentTimeRange, machine);
+                    
+                    // 生成剔除率数据
+                    deviceData[machine].rateData = rejectionPoints.map(point => ({
+                        name: point,
+                        value: (Math.random() * 2).toFixed(2)
+                    }));
+                    
+                    // 生成分布数据
+                    deviceData[machine].distributionData = rejectionPoints.map(point => ({
+                        name: point,
+                        value: Math.floor(Math.random() * 300) + 100
+                    }));
+                    
+                    // 生成状态数据
+                    deviceData[machine].statusData = Math.floor(Math.random() * 30) + 70;
+                    
+                    // 生成摘要数据
+                    deviceData[machine].summaryData = {
+                        totalRate: (Math.random() * 3 + 1).toFixed(2),
+                        totalRejection: Math.floor(Math.random() * 5000) + 10000,
+                        avgSlope: (Math.random() * 0.5).toFixed(2)
+                    };
+                });
+            }
+        }
+        
+        // 初始化剔除点选择
+        const rejectionPointsContainer = document.getElementById('rejection-points');
+        rejectionPoints.forEach(point => {
+            const checkboxItem = document.createElement('div');
+            checkboxItem.className = 'checkbox-item';
+            checkboxItem.innerHTML = `
+                <input type="checkbox" id="${point}" checked>
+                <label for="${point}">${point}</label>
+            `;
+            rejectionPointsContainer.appendChild(checkboxItem);
+            
+            // 添加事件监听
+            const checkbox = checkboxItem.querySelector('input');
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    if (!appState.selectedPoints.includes(point)) {
+                        appState.selectedPoints.push(point);
+                    }
+                } else {
+                    const index = appState.selectedPoints.indexOf(point);
+                    if (index !== -1) {
+                        appState.selectedPoints.splice(index, 1);
+                    }
+                }
+                updateAllCharts();
+            });
+        });
+        
+        // 初始化设备列表
+        function updateMachineList(region) {
+            const machineListContainer = document.getElementById('machine-list');
+            machineListContainer.innerHTML = '';
+            
+            machines[region].forEach(machine => {
+                const machineItem = document.createElement('div');
+                machineItem.className = 'machine-item';
+                machineItem.textContent = machine;
+                machineItem.addEventListener('click', function() {
+                    // 移除所有active类
+                    document.querySelectorAll('.machine-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    // 添加active类到当前点击项
+                    this.classList.add('active');
+                    // 更新状态
+                    appState.selectedMachine = machine;
+                    // 更新图表显示该设备详情
+                    updateAllCharts();
+                });
+                machineListContainer.appendChild(machineItem);
+            });
+            
+            // 默认选中第一个设备
+            if (machineListContainer.firstChild) {
+                machineListContainer.firstChild.classList.add('active');
+                appState.selectedMachine = machines[region][0];
+            }
+        }
+        
+        // 区域切换
+        document.querySelectorAll('.region-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const region = this.getAttribute('data-region');
+                appState.currentRegion = region;
+                updateMachineList(region);
+                updateAllCharts();
+            });
+        });
+        
+        // 时间范围切换
+        document.querySelectorAll('.time-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const timeRange = this.getAttribute('data-time');
+                appState.currentTimeRange = timeRange;
+                
+                // 重新生成所有设备的趋势数据
+                for (const region in machines) {
+                    machines[region].forEach(machine => {
+                        deviceData[machine].trendData = generateTrendData(timeRange, machine);
+                    });
+                }
+                
+                updateAllCharts();
+            });
+        });
+        
+        // 初始化区域一
+        updateMachineList("1");
+        
+        // 初始化图表
+        appState.charts.trendChart = echarts.init(document.getElementById('trend-chart'));
+        appState.charts.rateChart = echarts.init(document.getElementById('rate-chart'));
+        appState.charts.distributionChart = echarts.init(document.getElementById('distribution-chart'));
+        appState.charts.statusChart = echarts.init(document.getElementById('status-chart'));
+        
+        // 模拟图表数据
+        function generateTrendData(timeRange, machine) {
+            const data = [];
+            const now = new Date();
+            let points;
+            
+            switch(timeRange) {
+                case "1": points = 12; break; // 1小时，每5分钟一个点
+                case "4": points = 24; break; // 4小时，每10分钟一个点
+                case "24": points = 24; break; // 24小时，每小时一个点
+                case "168": points = 28; break; // 7天，每6小时一个点
+                default: points = 12;
+            }
+            
+            // 为每个设备生成不同的随机种子
+            const seed = machine.charCodeAt(0) + machine.charCodeAt(1);
+            
+            for (let i = 0; i < points; i++) {
+                const time = new Date(now.getTime() - (points - 1 - i) * (3600000 * 24 / points));
+                let timeStr;
+                
+                if (timeRange === "1") {
+                    timeStr = time.getHours() + ':' + (time.getMinutes() < 10 ? '0' : '') + time.getMinutes();
+                } else if (timeRange === "4") {
+                    timeStr = time.getHours() + ':' + (time.getMinutes() < 10 ? '0' : '') + time.getMinutes();
+                } else if (timeRange === "24") {
+                    timeStr = time.getHours() + ':00';
+                } else {
+                    timeStr = (time.getMonth()+1) + '/' + time.getDate() + ' ' + time.getHours() + ':00';
+                }
+                
+                // 使用设备特定的随机种子
+                const randomValue = Math.abs(Math.sin(seed + i)) * 1000 + 500;
+                data.push({
+                    time: timeStr,
+                    value: Math.floor(randomValue)
+                });
+            }
+            return data;
+        }
+        
+        // 显示通知
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+        
+        // 显示加载动画
+        function showLoading(chartId) {
+            const chartElement = document.getElementById(chartId);
+            let loadingElement = chartElement.querySelector('.loading');
+            if (!loadingElement) {
+                loadingElement = document.createElement('div');
+                loadingElement.className = 'loading';
+                loadingElement.innerHTML = '<div class="loading-spinner"></div>';
+                chartElement.appendChild(loadingElement);
+            }
+        }
+        
+        // 隐藏加载动画
+        function hideLoading(chartId) {
+            const chartElement = document.getElementById(chartId);
+            const loadingElement = chartElement.querySelector('.loading');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+        }
+        
+        // 更新当前设备显示
+        function updateCurrentMachineDisplay() {
+            document.getElementById('trend-machine').textContent = `当前设备: ${appState.selectedMachine}`;
+            document.getElementById('rate-machine').textContent = `当前设备: ${appState.selectedMachine}`;
+            document.getElementById('distribution-machine').textContent = `当前设备: ${appState.selectedMachine}`;
+            document.getElementById('status-machine').textContent = `当前设备: ${appState.selectedMachine}`;
+        }
+        
+        // 更新所有图表
+        function updateAllCharts() {
+            // 显示加载动画
+            showLoading('trend-chart');
+            showLoading('rate-chart');
+            showLoading('distribution-chart');
+            showLoading('status-chart');
+            
+            // 模拟数据加载延迟
+            setTimeout(() => {
+                updateTrendChart();
+                updateRateChart();
+                updateDistributionChart();
+                updateStatusChart();
+                updateSummaryData();
+                updateCurrentMachineDisplay();
+                
+                // 隐藏加载动画
+                hideLoading('trend-chart');
+                hideLoading('rate-chart');
+                hideLoading('distribution-chart');
+                hideLoading('status-chart');
+                
+                // 更新最后更新时间
+                const now = new Date();
+                document.getElementById('update-time').textContent = 
+                    `最后更新: ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                
+                // 显示通知
+                showNotification('数据已更新');
+            }, 800);
+        }
+        
+        // 更新趋势图
+        function updateTrendChart() {
+            if (!appState.selectedMachine) return;
+            
+            const trendData = deviceData[appState.selectedMachine].trendData;
+            
+            const trendOption = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                legend: {
+                    data: ['剔除量', '剔除率'],
+                    textStyle: {
+                        color: '#e0e0e0'
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: trendData.map(item => item.time),
+                    axisLine: {
+                        lineStyle: {
+                            color: '#5a7bb4'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#a0c0ff'
+                    }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: '剔除量',
+                        axisLine: {
+                            lineStyle: {
+                                color: '#5a7bb4'
+                            }
+                        },
+                        axisLabel: {
+                            color: '#a0c0ff'
+                        },
+                        splitLine: {
+                            lineStyle: {
+                                color: 'rgba(90, 123, 180, 0.3)'
+                            }
+                        }
+                    },
+                    {
+                        type: 'value',
+                        name: '剔除率(%)',
+                        axisLine: {
+                            lineStyle: {
+                                color: '#5a7bb4'
+                            }
+                        },
+                        axisLabel: {
+                            color: '#a0c0ff',
+                            formatter: '{value}%'
+                        },
+                        splitLine: {
+                            lineStyle: {
+                                color: 'rgba(90, 123, 180, 0.3)'
+                            }
+                        }
+                    }
+                ],
+                series: [
+                    {
+                        name: '剔除量',
+                        type: 'bar',
+                        data: trendData.map(item => item.value),
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#3a8ee6' },
+                                { offset: 1, color: '#1a2b4d' }
+                            ])
+                        },
+                        // 添加数据标签
+                        label: {
+                            show: true,
+                            position: 'top',
+                            color: '#fff',
+                            fontSize: 10,
+                            formatter: '{c}'
+                        }
+                    },
+                    {
+                        name: '剔除率',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        data: trendData.map(() => (Math.random() * 3).toFixed(2)),
+                        itemStyle: {
+                            color: '#ff6b6b'
+                        },
+                        lineStyle: {
+                            width: 3
+                        },
+                        // 添加数据标签
+                        label: {
+                            show: true,
+                            position: 'top',
+                            color: '#ff6b6b',
+                            fontSize: 10,
+                            formatter: '{c}%'
+                        }
+                    }
+                ]
+            };
+            
+            appState.charts.trendChart.setOption(trendOption, true);
+        }
+        
+        // 更新剔除率对比图
+        function updateRateChart() {
+            if (!appState.selectedMachine) return;
+            
+            const rateData = deviceData[appState.selectedMachine].rateData
+                .filter(item => appState.selectedPoints.includes(item.name))
+                .slice(0, 5); // 只显示前5个剔除点
+            
+            const rateOption = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: rateData.map(item => item.name),
+                    axisLine: {
+                        lineStyle: {
+                            color: '#5a7bb4'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#a0c0ff',
+                        interval: 0,
+                        rotate: 30
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '剔除率(%)',
+                    axisLine: {
+                        lineStyle: {
+                            color: '#5a7bb4'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#a0c0ff',
+                        formatter: '{value}%'
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: 'rgba(90, 123, 180, 0.3)'
+                        }
+                    }
+                },
+                series: [
+                    {
+                        name: appState.selectedMachine,
+                        type: 'bar',
+                        data: rateData.map(item => item.value),
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#3a8ee6' },
+                                { offset: 1, color: '#1a2b4d' }
+                            ])
+                        },
+                        // 添加数据标签
+                        label: {
+                            show: true,
+                            position: 'top',
+                            color: '#fff',
+                            fontSize: 10,
+                            formatter: '{c}%'
+                        }
+                    }
+                ]
+            };
+            
+            appState.charts.rateChart.setOption(rateOption, true);
+        }
+        
+        // 更新剔除量分布图
+        function updateDistributionChart() {
+            if (!appState.selectedMachine) return;
+            
+            const distributionData = deviceData[appState.selectedMachine].distributionData
+                .filter(item => appState.selectedPoints.includes(item.name))
+                .slice(0, 5); // 只显示前5个剔除点
+            
+            const distributionOption = {
+                tooltip: {
+                    trigger: 'item'
+                },
+                legend: {
+                    orient: 'vertical',
+                    right: 10,
+                    top: 'center',
+                    textStyle: {
+                        color: '#e0e0e0'
+                    }
+                },
+                series: [
+                    {
+                        name: '剔除量分布',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 10,
+                            borderColor: '#0f1c3c',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: true,
+                            formatter: '{b}: {c} ({d}%)',
+                            color: '#e0e0e0'
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: '18',
+                                fontWeight: 'bold',
+                                color: '#ffffff'
+                            }
+                        },
+                        labelLine: {
+                            show: true
+                        },
+                        data: distributionData
+                    }
+                ]
+            };
+            
+            appState.charts.distributionChart.setOption(distributionOption, true);
+        }
+        
+        // 更新设备状态概览图
+        function updateStatusChart() {
+            if (!appState.selectedMachine) return;
+            
+            const statusData = deviceData[appState.selectedMachine].statusData;
+            
+            const statusOption = {
+                tooltip: {
+                    trigger: 'item'
+                },
+                series: [
+                    {
+                        name: '运行效率',
+                        type: 'gauge',
+                        radius: '100%',
+                        startAngle: 180,
+                        endAngle: 0,
+                        min: 0,
+                        max: 100,
+                        splitNumber: 10,
+                        axisLine: {
+                            lineStyle: {
+                                width: 10,
+                                color: [
+                                    [0.3, '#ff6b6b'],
+                                    [0.7, '#feca57'],
+                                    [1, '#3a8ee6']
+                                ]
+                            }
+                        },
+                        pointer: {
+                            icon: 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z',
+                            length: '12%',
+                            width: 10,
+                            offsetCenter: [0, '-60%'],
+                            itemStyle: {
+                                color: 'auto'
+                            }
+                        },
+                        axisTick: {
+                            length: 8,
+                            lineStyle: {
+                                color: 'auto',
+                                width: 2
+                            }
+                        },
+                        splitLine: {
+                            length: 12,
+                            lineStyle: {
+                                color: 'auto',
+                                width: 3
+                            }
+                        },
+                        axisLabel: {
+                            color: '#a0c0ff',
+                            fontSize: 12,
+                            distance: -40,
+                            formatter: function(value) {
+                                if (value === 0 || value === 50 || value === 100) {
+                                    return value + '%';
+                                }
+                                return '';
+                            }
+                        },
+                        title: {
+                            offsetCenter: [0, '-20%'],
+                            fontSize: 14,
+                            color: '#a0c0ff'
+                        },
+                        detail: {
+                            fontSize: 24,
+                            offsetCenter: [0, '0%'],
+                            valueAnimation: true,
+                            formatter: '{value}%',
+                            color: 'auto'
+                        },
+                        data: [
+                            {
+                                value: statusData,
+                                name: '运行效率'
+                            }
+                        ]
+                    }
+                ]
+            };
+            
+            appState.charts.statusChart.setOption(statusOption, true);
+        }
+        
+        // 更新摘要数据
+        function updateSummaryData() {
+            if (!appState.selectedMachine) return;
+            
+            const summaryData = deviceData[appState.selectedMachine].summaryData;
+            document.getElementById('total-rate').innerHTML = summaryData.totalRate + '<span class="data-unit">%</span>';
+            document.getElementById('total-rejection').innerHTML = summaryData.totalRejection.toLocaleString() + '<span class="data-unit">支</span>';
+            document.getElementById('avg-slope').innerHTML = summaryData.avgSlope + '<span class="data-unit">/h</span>';
+        }
+        
+        // 初始化设备数据
+        initializeDeviceData();
+        
+        // 初始化图表
+        updateAllCharts();
+        
+        // 响应窗口大小变化
+        window.addEventListener('resize', function() {
+            Object.values(appState.charts).forEach(chart => {
+                chart.resize();
+            });
+        });
+    </script>
+</body>
+</html>
